@@ -7,10 +7,11 @@ font = "sans serif"
 
 [server]
 enableCORS = false
-enableXsrfProtection = true
+enableXsrfProtection = false
 maxUploadSize = 200
 headless = true
 port = 8501
+fileWatcherType = "poll"
 
 [global]
 developmentMode = false
@@ -20,6 +21,3 @@ gatherUsageStats = false
 
 [runner]
 fastReruns = true
-
-[deprecation]
-showfileUploaderEncoding = false
