@@ -1,0 +1,62 @@
+{
+  "SVM (Gabor)": {
+    "accuracy": 0.6467,
+    "precision": 0.6493,
+    "recall": 0.6467,
+    "f1": 0.6472,
+    "far": 0.2548,
+    "frr": 0.255,
+    "eer": 0.2549,
+    "per_class": {
+      "Healthy": {
+        "far": 0.24,
+        "frr": 0.241,
+        "eer": 0.2405,
+        "roc_auc": 0.8358
+      },
+      "Glaucoma": {
+        "far": 0.296,
+        "frr": 0.295,
+        "eer": 0.2955,
+        "roc_auc": 0.7699
+      },
+      "Myopia": {
+        "far": 0.2285,
+        "frr": 0.229,
+        "eer": 0.2287,
+        "roc_auc": 0.8639
+      }
+    },
+    "training_time_s": 307.6
+  },
+  "RF (Wavelet)": {
+    "accuracy": 0.6917,
+    "precision": 0.6979,
+    "recall": 0.6917,
+    "f1": 0.6932,
+    "far": 0.2178,
+    "frr": 0.2167,
+    "eer": 0.2172,
+    "per_class": {
+      "Healthy": {
+        "far": 0.219,
+        "frr": 0.221,
+        "eer": 0.22,
+        "roc_auc": 0.8527
+      },
+      "Glaucoma": {
+        "far": 0.2585,
+        "frr": 0.257,
+        "eer": 0.2578,
+        "roc_auc": 0.7912
+      },
+      "Myopia": {
+        "far": 0.176,
+        "frr": 0.172,
+        "eer": 0.174,
+        "roc_auc": 0.8843
+      }
+    },
+    "training_time_s": 234.5
+  }
+}

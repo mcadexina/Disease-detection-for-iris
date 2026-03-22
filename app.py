@@ -539,7 +539,7 @@ def _show_single_result(model_name, pred_class, confidence, proba):
         ax.set_title(f'{model_name} — Output Probabilities', fontsize=10)
         ax.invert_yaxis()
         plt.tight_layout()
-        st.image(fig_to_streamlit(fig), use_container_width=False)
+        st.image(fig_to_streamlit(fig), width='content')
     else:
         st.warning(f"Unexpected probability vector length {len(proba)}.")
 
@@ -561,7 +561,7 @@ def _show_multi_model_results(results):
                 'Confidence': f"{r['conf']:.1f}%",
                 'Note': '',
             })
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
     # Consensus banner
     preds = [r['pred'] for r in results.values() if 'pred' in r]
@@ -600,7 +600,7 @@ def _show_multi_model_results(results):
             ax.invert_yaxis()
             ax.tick_params(labelsize=8)
         plt.tight_layout()
-        st.image(fig_to_streamlit(fig), use_container_width=True)
+        st.image(fig_to_streamlit(fig), width='stretch')
 
 
 def _show_disease_info(pred_class):
@@ -809,7 +809,7 @@ def show_home():
                                    'Gabor filter', '2D Wavelet DWT'],
             'Validation': ['Train/Val/Test split'] * 4 + ['5-Fold CV', '5-Fold CV'],
         }
-        st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(data), width='stretch', hide_index=True)
 
     # ── CTA ────────────────────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>Get Started</div>", unsafe_allow_html=True)
@@ -823,7 +823,7 @@ def show_home():
         cta_col, _, _ = st.columns([1, 1, 2])
         with cta_col:
             if st.button("🔍 Run Disease Detection →", type="primary",
-                         use_container_width=True):
+                         width='stretch'):
                 st.session_state.page = "🔍 Disease Detection"
                 st.rerun()
 
@@ -982,7 +982,7 @@ def show_detection():
     with col_img:
         st.markdown("**Uploaded Image**")
         st.image(img_np, caption=f"{w}×{h} px  ·  {uploaded.name}",
-                 use_container_width=True)
+                 width='stretch')
 
     with col_overlay:
         if show_iris_detect:
@@ -992,11 +992,11 @@ def show_detection():
             if iris_found:
                 st.image(annotated,
                          caption="🟢 Green circle = iris boundary  ·  Orange dot = centre",
-                         use_container_width=True)
+                         width='stretch')
             else:
                 st.image(img_np,
                          caption="⚠️ No iris circle detected automatically",
-                         use_container_width=True)
+                         width='stretch')
                 st.markdown(
                     "<div class='warn-box'>Could not auto-detect the iris boundary. "
                     "Make sure the image is a close-up eye or iris photo. "
@@ -1022,7 +1022,7 @@ def show_detection():
                     fig = show_preprocessing_steps(img_np)
                     st.image(fig_to_streamlit(fig),
                              caption="Original → Grayscale → CLAHE → Resized",
-                             use_container_width=True)
+                             width='stretch')
                 except Exception as e:
                     st.warning(f"Preprocessing visualisation failed: {e}")
 
@@ -1160,7 +1160,7 @@ def show_evaluation():
                     'EER':     f"{eer_val:.2f}%",
                     'ROC-AUC': f"{auc_val:.4f}",
                 })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
     else:
         st.info("Per-class breakdown not available for this model.")
 
@@ -1173,7 +1173,7 @@ def show_evaluation():
         if per and all('fpr' in per.get(c, {}) for c in CLASSES if c in per):
             from utils.evaluation import plot_roc_curves
             fig_roc = plot_roc_curves(m, CLASSES, title=f"ROC — {selected}")
-            st.image(fig_to_streamlit(fig_roc), use_container_width=True)
+            st.image(fig_to_streamlit(fig_roc), width='stretch')
         else:
             st.markdown(
                 "<div class='info-box'>ℹ️ Full ROC data is only stored for deep learning "
@@ -1204,7 +1204,7 @@ def show_evaluation():
             ax3.spines['top'].set_visible(False)
             ax3.spines['right'].set_visible(False)
             plt.tight_layout()
-            st.image(fig_to_streamlit(fig3), use_container_width=True)
+            st.image(fig_to_streamlit(fig3), width='stretch')
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1290,7 +1290,7 @@ def show_comparison():
             'FRR':       f"{float(mv.get('frr', 0))*100:.2f}%",
             'EER':       f"{float(mv.get('eer', 0))*100:.2f}%",
         })
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
     # ── Visual comparison charts ───────────────────────────────────────────
     st.markdown("<div class='divider-label'>Visual Comparison</div>",
@@ -1325,7 +1325,7 @@ def show_comparison():
         fig_a = _hbar_chart(model_labels, acc_vals,
                             'Accuracy (%)', 'Accuracy (%)',
                             best_acc, '#1565C0', '#90CAF9')
-        st.image(fig_to_streamlit(fig_a), use_container_width=True)
+        st.image(fig_to_streamlit(fig_a), width='stretch')
 
     with col_b:
         st.markdown("**EER Ranking** *(lower = better)*")
@@ -1333,7 +1333,7 @@ def show_comparison():
         fig_e = _hbar_chart(model_labels, eer_vals,
                             'Equal Error Rate (%)', 'EER (%)',
                             best_eer, '#2E7D32', '#A5D6A7', fmt='.2f')
-        st.image(fig_to_streamlit(fig_e), use_container_width=True)
+        st.image(fig_to_streamlit(fig_e), width='stretch')
 
     # ── ROC-AUC heat table ────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>ROC-AUC by Class</div>",
@@ -1347,7 +1347,7 @@ def show_comparison():
                for cls in CLASSES},
         })
     if roc_rows:
-        st.dataframe(pd.DataFrame(roc_rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(roc_rows), width='stretch', hide_index=True)
         st.markdown(
             "<div class='info-box'>ℹ️ ROC-AUC closer to 1.0 is better. "
             "ML models (SVM, RF) may show 0.0 if full curve data was not stored.</div>",
@@ -1470,7 +1470,7 @@ def show_training():
             {'Model': 'MobileNet',    'Type': 'DL Transfer',   'Estimated Time': '~30–60 min'},
             {'Model': 'ResNet50',     'Type': 'DL Transfer',   'Estimated Time': '~30–60 min'},
             {'Model': 'Xception',     'Type': 'DL Transfer',   'Estimated Time': '~45–90 min'},
-        ]), use_container_width=True, hide_index=True)
+        ]), width='stretch', hide_index=True)
 
     # ── Tab B: Launch from App ────────────────────────────────────────────
     with tab_b:
