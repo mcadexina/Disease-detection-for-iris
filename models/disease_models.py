@@ -49,9 +49,7 @@ def create_xception_model(num_classes=NUM_CLASSES, fine_tune_layers=30):
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-4),
         loss='sparse_categorical_crossentropy',
-        metrics=['accuracy',
-                 tf.keras.metrics.Precision(name='precision'),
-                 tf.keras.metrics.Recall(name='recall')],
+        metrics=['accuracy'],
     )
     return model
 
@@ -71,9 +69,7 @@ def create_resnet50_model(num_classes=NUM_CLASSES, fine_tune_layers=20):
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-4),
         loss='sparse_categorical_crossentropy',
-        metrics=['accuracy',
-                 tf.keras.metrics.Precision(name='precision'),
-                 tf.keras.metrics.Recall(name='recall')],
+        metrics=['accuracy'],
     )
     return model
 
@@ -93,9 +89,7 @@ def create_mobilenet_model(num_classes=NUM_CLASSES, fine_tune_layers=20):
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-4),
         loss='sparse_categorical_crossentropy',
-        metrics=['accuracy',
-                 tf.keras.metrics.Precision(name='precision'),
-                 tf.keras.metrics.Recall(name='recall')],
+        metrics=['accuracy'],
     )
     return model
 
@@ -142,9 +136,7 @@ def create_custom_cnn_model(num_classes=NUM_CLASSES):
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-3),
         loss='sparse_categorical_crossentropy',
-        metrics=['accuracy',
-                 tf.keras.metrics.Precision(name='precision'),
-                 tf.keras.metrics.Recall(name='recall')],
+        metrics=['accuracy'],
     )
     return model
 
