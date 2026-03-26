@@ -51,10 +51,7 @@ CLASS_ICONS = {
 }
 
 MODEL_PATHS = {
-    'Xception':    os.path.join(SAVED_MODELS_DIR, 'xception_iris.h5'),
     'ResNet50':    os.path.join(SAVED_MODELS_DIR, 'resnet50_iris.h5'),
-    'MobileNet':   os.path.join(SAVED_MODELS_DIR, 'mobilenet_iris.h5'),
-    'CNN':         os.path.join(SAVED_MODELS_DIR, 'cnn_iris.h5'),
     'SVM (Gabor)': os.path.join(SAVED_MODELS_DIR, 'svm_gabor.pkl'),
     'RF (Wavelet)':os.path.join(SAVED_MODELS_DIR, 'rf_wavelet.pkl'),
 }
@@ -426,11 +423,9 @@ def run_inference(img_np, model_name):
         feat = preprocess_for_ml(img_np, method).reshape(1, -1)
         proba = clf.predict_proba(feat)[0]
     else:
+        # ResNet50 deep learning model
         model = _load_keras_model(path)
-        if model_name == 'CNN':
-            tensor = preprocess_for_cnn(img_np)
-        else:
-            tensor = preprocess_for_dl(img_np)
+        tensor = preprocess_for_dl(img_np)
         proba = model.predict(tensor, verbose=0)[0]
 
     pred_idx     = int(np.argmax(proba))
@@ -792,7 +787,7 @@ def show_home():
 | **1** | Collect iris images (Healthy / Glaucoma / Myopia) |
 | **2** | Preprocess: grayscale → CLAHE → resize to 224×224 |
 | **3** | Feature extraction: **Gabor Filter** → SVM · **Wavelet** → RF |
-| **4** | Deep learning: **Xception · ResNet50 · MobileNet · Custom CNN** |
+| **4** | Deep learning: **ResNet50** (transfer learning) |
 | **5** | Evaluate: Accuracy · FAR · FRR · EER · ROC-AUC |
 | **6** | Prototype screening system in Streamlit |
 """)
@@ -800,14 +795,10 @@ def show_home():
     with c2:
         st.markdown("### 🤖 Model Architecture Summary")
         data = {
-            'Model': ['Xception', 'ResNet50', 'MobileNet', 'Custom CNN',
-                      'SVM (Gabor)', 'RF (Wavelet)'],
-            'Category': ['Deep Learning 🧠', 'Deep Learning 🧠', 'Deep Learning 🧠',
-                         'Deep Learning 🧠', 'Machine Learning ⚙️', 'Machine Learning ⚙️'],
-            'Feature Extraction': ['ImageNet transfer', 'ImageNet transfer',
-                                   'ImageNet transfer', 'Conv layers',
-                                   'Gabor filter', '2D Wavelet DWT'],
-            'Validation': ['Train/Val/Test split'] * 4 + ['5-Fold CV', '5-Fold CV'],
+            'Model': ['ResNet50', 'SVM (Gabor)', 'RF (Wavelet)'],
+            'Category': ['Deep Learning 🧠', 'Machine Learning ⚙️', 'Machine Learning ⚙️'],
+            'Feature Extraction': ['ImageNet transfer', 'Gabor filter', '2D Wavelet DWT'],
+            'Validation': ['Train/Val/Test split', '5-Fold CV', '5-Fold CV'],
         }
         st.dataframe(pd.DataFrame(data), width='stretch', hide_index=True)
 
@@ -1395,16 +1386,12 @@ def show_training():
     st.markdown("<div class='divider-label'>Current Model Status</div>",
                 unsafe_allow_html=True)
     MODEL_TYPES = {
-        'Xception':    ('Deep Learning', '🧠'),
         'ResNet50':    ('Deep Learning', '🧠'),
-        'MobileNet':   ('Deep Learning', '🧠'),
-        'CNN':         ('Deep Learning', '🧠'),
         'SVM (Gabor)': ('Machine Learning', '⚙️'),
         'RF (Wavelet)':('Machine Learning', '⚙️'),
     }
     TRAIN_TIME = {
-        'Xception':    '45–90 min',  'ResNet50':    '30–60 min',
-        'MobileNet':   '30–60 min',  'CNN':         '15–30 min',
+        'ResNet50':    '30–60 min',
         'SVM (Gabor)': '~5–15 min',  'RF (Wavelet)':'~5–15 min',
     }
     status_cols = st.columns(len(MODEL_PATHS))
@@ -1452,12 +1439,10 @@ def show_training():
         steps = [
             ("Step 1 — ML models (fastest, minutes)",
              f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models svm,rf'),
-            ("Step 2 — Custom CNN (~15–30 min)",
-             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models cnn'),
-            ("Step 3 — Deep learning models (hours)",
-             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models resnet50,mobilenet,xception'),
-            ("Or train everything at once",
-             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models all'),
+            ("Step 2 — ResNet50 deep learning (~30–60 min)",
+             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models resnet50'),
+            ("Or train all 3 models at once",
+             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models svm,rf,resnet50'),
         ]
         for label, cmd_str in steps:
             st.markdown(f"**{label}**")
@@ -1466,31 +1451,24 @@ def show_training():
         st.dataframe(pd.DataFrame([
             {'Model': 'SVM (Gabor)',  'Type': 'ML',            'Estimated Time': '~5–15 min'},
             {'Model': 'RF (Wavelet)', 'Type': 'ML',            'Estimated Time': '~5–15 min'},
-            {'Model': 'Custom CNN',   'Type': 'Deep Learning', 'Estimated Time': '~15–30 min'},
-            {'Model': 'MobileNet',    'Type': 'DL Transfer',   'Estimated Time': '~30–60 min'},
             {'Model': 'ResNet50',     'Type': 'DL Transfer',   'Estimated Time': '~30–60 min'},
-            {'Model': 'Xception',     'Type': 'DL Transfer',   'Estimated Time': '~45–90 min'},
         ]), width='stretch', hide_index=True)
 
     # ── Tab B: Launch from App ────────────────────────────────────────────
     with tab_b:
         st.markdown(
-            "<div class='warn-box'>⚠️ Streamlit may time out for deep learning runs "
-            "(ResNet50, MobileNet, Xception). Use the Terminal tab for those.</div>",
+            "<div class='warn-box'>⚠️ Streamlit may time out for ResNet50 training. "
+            "Use the Terminal tab for long-running jobs.</div>",
             unsafe_allow_html=True,
         )
         st.markdown("**Select models to train:**")
         model_flags = {
-            'Xception':    st.checkbox('Xception', value=False),
             'ResNet50':    st.checkbox('ResNet50', value=False),
-            'MobileNet':   st.checkbox('MobileNet', value=False),
-            'CNN':         st.checkbox('Custom CNN', value=True),
             'SVM (Gabor)': st.checkbox('SVM + Gabor (5-fold CV)', value=True),
             'RF (Wavelet)':st.checkbox('RF + Wavelet (5-fold CV)', value=True),
         }
         MODEL_KEYS = {
-            'Xception': 'xception', 'ResNet50': 'resnet50',
-            'MobileNet': 'mobilenet', 'CNN': 'cnn',
+            'ResNet50': 'resnet50',
             'SVM (Gabor)': 'svm', 'RF (Wavelet)': 'rf',
         }
         chosen = [MODEL_KEYS[m] for m, sel in model_flags.items() if sel]
@@ -1553,7 +1531,7 @@ def show_about():
             "<ol>"
             "<li>Collect relevant images of normal and infected iris images</li>"
             "<li>Apply <b>Gabor Filter</b> and <b>2D Wavelet Transform</b> for ML feature extraction; "
-            "apply <b>ResNet50, MobileNet, Xception, CNN</b> as deep learning methods</li>"
+            "apply <b>ResNet50</b> as the deep learning method</li>"
             "<li>Evaluate models using Accuracy, Precision, FAR, FRR, EER, ROC Curve</li>"
             "<li>Implement a prototype screening system (this app) using the best-performing model</li>"
             "</ol>"
@@ -1594,7 +1572,7 @@ def show_about():
 | **Preprocessing** | Grayscale → CLAHE → Gaussian blur → Resize to 224×224 |
 | **Iris segmentation** | Hough Circle Transform (OpenCV) |
 | **ML features** | Gabor filter (→ SVM) · 2D Wavelet DWT (→ RF, 5-fold CV) |
-| **DL models** | Xception, ResNet50, MobileNetV2, Custom CNN (transfer + fine-tune) |
+| **DL models** | ResNet50 (ImageNet transfer learning + fine-tune) |
 | **Metrics** | Accuracy, Precision, Recall, F1, FAR, FRR, EER, ROC-AUC |
 | **Framework** | Python · TensorFlow/Keras · scikit-learn · Streamlit |
 """)
