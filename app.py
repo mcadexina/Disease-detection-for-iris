@@ -40,9 +40,9 @@ os.makedirs(SAVED_MODELS_DIR, exist_ok=True)
 
 CLASSES = ['Healthy', 'Glaucoma', 'Myopia']
 CLASS_COLORS = {
-    'Healthy':  '#2E7D32',
-    'Glaucoma': '#C62828',
-    'Myopia':   '#1565C0',
+    'Healthy':  '#10B981',
+    'Glaucoma': '#DC2626',
+    'Myopia':   '#2563EB',
 }
 CLASS_ICONS = {
     'Healthy':  '✅',
@@ -80,8 +80,8 @@ DISEASE_INFO = {
             'Continue routine annual eye examinations to maintain ocular health.'
         ),
         'icon': '✅',
-        'color': '#2E7D32',
-        'bg': '#E8F5E9',
+        'color': '#10B981',
+        'bg': '#ECFDF5',
     },
     'Glaucoma': {
         'description': (
@@ -101,8 +101,8 @@ DISEASE_INFO = {
             'can halt further optic nerve damage.'
         ),
         'icon': '⚠️',
-        'color': '#C62828',
-        'bg': '#FFEBEE',
+        'color': '#DC2626',
+        'bg': '#FEF2F2',
     },
     'Myopia': {
         'description': (
@@ -122,8 +122,8 @@ DISEASE_INFO = {
             'Schedule a comprehensive eye examination to confirm the prescription.'
         ),
         'icon': '🔵',
-        'color': '#1565C0',
-        'bg': '#E3F2FD',
+        'color': '#2563EB',
+        'bg': '#EFF6FF',
     },
 }
 
@@ -134,207 +134,441 @@ DISEASE_INFO = {
 def apply_custom_css():
     st.markdown("""
     <style>
-    /* ── Tokens ─────────────────────────────────────────── */
+    /* ═══════════════════════════════════════════════════════════════
+       Professional Medical UI Design System
+       Color Palette: Teal/Cyan + Emerald + Slate Grey
+    ═══════════════════════════════════════════════════════════════ */
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
     :root{
-        --blue-900:#0D47A1;--blue-700:#1565C0;--blue-500:#1976D2;
-        --blue-100:#E3F2FD;--blue-50:#F0F7FF;
-        --green-800:#1B5E20;--green-700:#2E7D32;--green-100:#E8F5E9;
-        --red-800:#B71C1C;--red-700:#C62828;--red-100:#FFEBEE;
-        --amber-700:#F9A825;--amber-50:#FFFDE7;
-        --grey-800:#263238;--grey-600:#546E7A;--grey-300:#B0BEC5;
-        --grey-100:#F5F7FA;--grey-50:#FAFBFC;
-        --radius-sm:6px;--radius-md:10px;--radius-lg:16px;
-        --shadow-sm:0 1px 4px rgba(0,0,0,.08);
-        --shadow-md:0 4px 16px rgba(0,0,0,.10);
-        --shadow-lg:0 8px 32px rgba(0,0,0,.12);
-        --transition:.18s ease;
+        /* Primary - Medical Teal/Cyan */
+        --primary-900:#0E7490;--primary-800:#0891B2;--primary-700:#06B6D4;
+        --primary-600:#22D3EE;--primary-500:#67E8F9;
+        --primary-100:#CFFAFE;--primary-50:#ECFEFF;
+
+        /* Success - Emerald Green */
+        --success-900:#047857;--success-800:#059669;--success-700:#10B981;
+        --success-100:#D1FAE5;--success-50:#ECFDF5;
+
+        /* Danger - Professional Red */
+        --danger-900:#991B1B;--danger-800:#B91C1C;--danger-700:#DC2626;
+        --danger-100:#FEE2E2;--danger-50:#FEF2F2;
+
+        /* Info - Professional Blue */
+        --info-900:#1E3A8A;--info-800:#1E40AF;--info-700:#2563EB;
+        --info-600:#3B82F6;--info-100:#DBEAFE;--info-50:#EFF6FF;
+
+        /* Warning - Amber */
+        --warning-800:#D97706;--warning-700:#F59E0B;
+        --warning-100:#FEF3C7;--warning-50:#FFFBEB;
+
+        /* Neutral - Modern Slate */
+        --slate-900:#0F172A;--slate-800:#1E293B;--slate-700:#334155;
+        --slate-600:#475569;--slate-500:#64748B;--slate-400:#94A3B8;
+        --slate-300:#CBD5E1;--slate-200:#E2E8F0;--slate-100:#F1F5F9;
+        --slate-50:#F8FAFC;
+
+        /* Spacing & Effects */
+        --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
+        --shadow-xs:0 1px 2px 0 rgba(0,0,0,.05);
+        --shadow-sm:0 2px 8px rgba(0,0,0,.06);
+        --shadow-md:0 4px 16px rgba(0,0,0,.08);
+        --shadow-lg:0 8px 32px rgba(0,0,0,.10);
+        --shadow-xl:0 16px 48px rgba(0,0,0,.12);
+        --transition:all .2s cubic-bezier(.4,0,.2,1);
     }
 
-    /* ── Global body tweaks ─────────────────────────────── */
-    .stApp{background:#F5F7FA}
-    section[data-testid="stSidebar"]{background:#0D47A1 !important}
-    section[data-testid="stSidebar"] *{color:#E3F2FD !important}
+    /* ═══ Global Styling ═══ */
+    .stApp{
+        background:var(--slate-50);
+        font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+    }
+
+    /* ═══ Sidebar - Professional Dark ═══ */
+    section[data-testid="stSidebar"]{
+        background:linear-gradient(180deg,var(--slate-900) 0%,var(--slate-800) 100%) !important;
+        border-right:1px solid var(--slate-700) !important;
+    }
+    section[data-testid="stSidebar"] *{
+        color:var(--slate-100) !important;
+    }
     section[data-testid="stSidebar"] .stRadio label{
-        background:rgba(255,255,255,.08);border-radius:var(--radius-sm);
-        padding:.45rem .8rem;margin:.15rem 0;display:block;
-        transition:background var(--transition);cursor:pointer;
+        background:rgba(255,255,255,.06);
+        border:1px solid rgba(255,255,255,.08);
+        border-radius:var(--radius-sm);
+        padding:.6rem 1rem;margin:.25rem 0;
+        display:block;transition:var(--transition);
+        cursor:pointer;font-weight:500;
     }
     section[data-testid="stSidebar"] .stRadio label:hover{
-        background:rgba(255,255,255,.18);
+        background:rgba(6,182,212,.15);
+        border-color:rgba(6,182,212,.3);
+        transform:translateX(3px);
+    }
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] > label[data-checked="true"]{
+        background:linear-gradient(135deg,rgba(6,182,212,.25),rgba(8,145,178,.25));
+        border-color:var(--primary-700);
+        font-weight:600;
     }
 
-    /* ── Page headers ───────────────────────────────────── */
+    /* ═══ Page Headers ═══ */
     .main-header{
-        font-size:2.1rem;font-weight:800;
-        background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%);
+        font-size:2.5rem;font-weight:800;
+        background:linear-gradient(135deg,var(--primary-800) 0%,var(--primary-700) 50%,var(--success-700) 100%);
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;text-align:center;margin-bottom:.3rem;
-        letter-spacing:-.5px;
+        background-clip:text;text-align:center;margin-bottom:.4rem;
+        letter-spacing:-.8px;line-height:1.2;
     }
     .page-sub{
-        font-size:1.05rem;color:var(--grey-600);
-        text-align:center;margin-bottom:1.8rem;
+        font-size:1.1rem;color:var(--slate-600);
+        text-align:center;margin-bottom:2.5rem;
+        font-weight:400;line-height:1.6;
     }
     .section-label{
-        font-size:.72rem;font-weight:700;letter-spacing:1.1px;
-        text-transform:uppercase;color:var(--grey-600);
-        margin:1.2rem 0 .5rem;
+        font-size:.7rem;font-weight:700;letter-spacing:1.3px;
+        text-transform:uppercase;color:var(--slate-500);
+        margin:2rem 0 .8rem;
     }
 
-    /* ── Cards ──────────────────────────────────────────── */
+    /* ═══ Cards & Containers ═══ */
     .card{
-        border-radius:var(--radius-md);padding:1.4rem 1.6rem;
+        border-radius:var(--radius-md);padding:1.8rem 2rem;
         background:#fff;box-shadow:var(--shadow-sm);
-        margin-bottom:1rem;border:1px solid rgba(0,0,0,.04);
-        transition:box-shadow var(--transition);
+        margin-bottom:1.25rem;
+        border:1px solid var(--slate-200);
+        transition:var(--transition);
     }
-    .card:hover{box-shadow:var(--shadow-md)}
+    .card:hover{
+        box-shadow:var(--shadow-md);
+        border-color:var(--primary-200);
+    }
 
     .kpi-card{
-        border-radius:var(--radius-md);padding:1.2rem 1.4rem;
+        border-radius:var(--radius-lg);padding:1.5rem 1.8rem;
         background:#fff;box-shadow:var(--shadow-sm);
-        border:1px solid rgba(0,0,0,.04);text-align:center;
-        transition:transform var(--transition),box-shadow var(--transition);
+        border:1px solid var(--slate-200);text-align:center;
+        transition:var(--transition);position:relative;overflow:hidden;
     }
-    .kpi-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
-    .kpi-number{font-size:2.2rem;font-weight:800;line-height:1.1;margin:.3rem 0}
-    .kpi-label{font-size:.78rem;font-weight:600;letter-spacing:.7px;
-               text-transform:uppercase;color:var(--grey-600)}
+    .kpi-card::before{
+        content:'';position:absolute;top:0;left:0;right:0;
+        height:3px;background:linear-gradient(90deg,var(--primary-700),var(--success-700));
+    }
+    .kpi-card:hover{
+        transform:translateY(-4px);
+        box-shadow:var(--shadow-lg);
+        border-color:var(--primary-300);
+    }
+    .kpi-number{
+        font-size:2.5rem;font-weight:800;
+        line-height:1.1;margin:.4rem 0;
+        background:linear-gradient(135deg,var(--primary-800),var(--primary-700));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .kpi-label{
+        font-size:.75rem;font-weight:600;letter-spacing:.9px;
+        text-transform:uppercase;color:var(--slate-500);
+    }
 
+    /* ═══ Hero Banner ═══ */
     .hero-band{
-        background:linear-gradient(135deg,#0D47A1 0%,#1565C0 55%,#1976D2 100%);
-        border-radius:var(--radius-lg);padding:2.2rem 2.5rem;margin-bottom:1.6rem;
+        background:linear-gradient(135deg,var(--primary-900) 0%,var(--primary-800) 50%,var(--success-800) 100%);
+        border-radius:var(--radius-xl);padding:2.5rem 3rem;margin-bottom:2rem;
         color:#fff;position:relative;overflow:hidden;
+        box-shadow:var(--shadow-lg);
+    }
+    .hero-band::before{
+        content:'';position:absolute;top:-50%;right:-10%;
+        width:400px;height:400px;
+        background:radial-gradient(circle,rgba(255,255,255,.1) 0%,transparent 70%);
+        border-radius:50%;
     }
     .hero-band::after{
-        content:'👁';position:absolute;right:2rem;top:50%;
-        transform:translateY(-50%);font-size:5rem;opacity:.12;
+        content:'👁️';position:absolute;right:3rem;top:50%;
+        transform:translateY(-50%);font-size:6rem;opacity:.08;
     }
-    .hero-title{font-size:2rem;font-weight:800;margin:0 0 .4rem;letter-spacing:-.5px}
-    .hero-sub{font-size:1rem;opacity:.85;margin:0}
+    .hero-title{
+        font-size:2.2rem;font-weight:800;margin:0 0 .6rem;
+        letter-spacing:-.6px;position:relative;z-index:1;
+    }
+    .hero-sub{
+        font-size:1.05rem;opacity:.9;margin:0;
+        position:relative;z-index:1;font-weight:400;
+    }
 
-    /* ── Result banners ─────────────────────────────────── */
+    /* ═══ Result Banners ═══ */
     .result-healthy{
-        background:var(--green-100);border-left:5px solid var(--green-700);
-        padding:1.1rem 1.5rem;border-radius:var(--radius-md);
-        font-size:1.2rem;font-weight:700;margin:.6rem 0;
-        display:flex;align-items:center;gap:.6rem;
+        background:linear-gradient(135deg,var(--success-50),#fff);
+        border:2px solid var(--success-700);border-left:6px solid var(--success-700);
+        padding:1.3rem 1.8rem;border-radius:var(--radius-lg);
+        font-size:1.3rem;font-weight:700;margin:.8rem 0;
+        display:flex;align-items:center;gap:.8rem;
+        box-shadow:0 4px 12px rgba(16,185,129,.15);
+        color:var(--success-900);
     }
     .result-glaucoma{
-        background:var(--red-100);border-left:5px solid var(--red-700);
-        padding:1.1rem 1.5rem;border-radius:var(--radius-md);
-        font-size:1.2rem;font-weight:700;margin:.6rem 0;
-        display:flex;align-items:center;gap:.6rem;
+        background:linear-gradient(135deg,var(--danger-50),#fff);
+        border:2px solid var(--danger-700);border-left:6px solid var(--danger-700);
+        padding:1.3rem 1.8rem;border-radius:var(--radius-lg);
+        font-size:1.3rem;font-weight:700;margin:.8rem 0;
+        display:flex;align-items:center;gap:.8rem;
+        box-shadow:0 4px 12px rgba(220,38,38,.15);
+        color:var(--danger-900);
     }
     .result-myopia{
-        background:var(--blue-100);border-left:5px solid var(--blue-700);
-        padding:1.1rem 1.5rem;border-radius:var(--radius-md);
-        font-size:1.2rem;font-weight:700;margin:.6rem 0;
-        display:flex;align-items:center;gap:.6rem;
+        background:linear-gradient(135deg,var(--info-50),#fff);
+        border:2px solid var(--info-700);border-left:6px solid var(--info-700);
+        padding:1.3rem 1.8rem;border-radius:var(--radius-lg);
+        font-size:1.3rem;font-weight:700;margin:.8rem 0;
+        display:flex;align-items:center;gap:.8rem;
+        box-shadow:0 4px 12px rgba(37,99,235,.15);
+        color:var(--info-900);
     }
 
-    /* ── Status / badge pills ───────────────────────────── */
-    .badge{display:inline-flex;align-items:center;gap:.3rem;
-           border-radius:20px;padding:.25rem .75rem;font-size:.78rem;font-weight:700}
-    .badge-green{background:#C8E6C9;color:#1B5E20}
-    .badge-red{background:#FFCDD2;color:#B71C1C}
-    .badge-blue{background:#BBDEFB;color:#0D47A1}
-    .badge-amber{background:#FFF9C4;color:#F57F17}
-    .badge-grey{background:#ECEFF1;color:#455A64}
+    /* ═══ Badges ═══ */
+    .badge{
+        display:inline-flex;align-items:center;gap:.35rem;
+        border-radius:20px;padding:.3rem .85rem;
+        font-size:.75rem;font-weight:700;
+        border:1px solid;
+    }
+    .badge-green{
+        background:var(--success-100);color:var(--success-900);
+        border-color:var(--success-700);
+    }
+    .badge-red{
+        background:var(--danger-100);color:var(--danger-900);
+        border-color:var(--danger-700);
+    }
+    .badge-blue{
+        background:var(--info-100);color:var(--info-900);
+        border-color:var(--info-700);
+    }
+    .badge-amber{
+        background:var(--warning-100);color:var(--warning-800);
+        border-color:var(--warning-700);
+    }
+    .badge-grey{
+        background:var(--slate-100);color:var(--slate-700);
+        border-color:var(--slate-300);
+    }
 
-    /* ── Metric tiles (evaluation page) ─────────────────── */
+    /* ═══ Metric Tiles ═══ */
     .metric-tile{
         background:#fff;border-radius:var(--radius-md);
-        padding:1rem 1.2rem;border:1px solid rgba(0,0,0,.04);
-        box-shadow:var(--shadow-sm);text-align:center;
+        padding:1.2rem 1.4rem;
+        border:1px solid var(--slate-200);
+        box-shadow:var(--shadow-xs);text-align:center;
+        transition:var(--transition);
     }
-    .metric-tile .val{font-size:1.6rem;font-weight:800;color:var(--blue-700)}
-    .metric-tile .lbl{font-size:.72rem;text-transform:uppercase;
-                      letter-spacing:.8px;color:var(--grey-600);font-weight:600}
-    .metric-tile .sub{font-size:.8rem;color:var(--grey-600);margin-top:.2rem}
+    .metric-tile:hover{
+        border-color:var(--primary-300);
+        box-shadow:var(--shadow-sm);
+    }
+    .metric-tile .val{
+        font-size:1.8rem;font-weight:800;
+        background:linear-gradient(135deg,var(--primary-800),var(--primary-700));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .metric-tile .lbl{
+        font-size:.7rem;text-transform:uppercase;
+        letter-spacing:.9px;color:var(--slate-500);font-weight:600;
+    }
+    .metric-tile .sub{
+        font-size:.8rem;color:var(--slate-600);margin-top:.3rem;
+    }
 
-    /* ── Step indicator ─────────────────────────────────── */
-    .steps{display:flex;gap:.5rem;align-items:center;margin:.8rem 0 1.2rem;flex-wrap:wrap}
-    .step{display:flex;align-items:center;gap:.4rem;
-          background:#fff;border:1.5px solid var(--grey-300);
-          border-radius:20px;padding:.3rem .9rem;font-size:.82rem;
-          font-weight:600;color:var(--grey-600)}
-    .step.active{background:var(--blue-700);border-color:var(--blue-700);color:#fff}
-    .step.done{background:var(--green-100);border-color:var(--green-700);color:var(--green-800)}
-    .step-arrow{color:var(--grey-300);font-size:.9rem}
+    /* ═══ Step Indicator ═══ */
+    .steps{
+        display:flex;gap:.6rem;align-items:center;
+        margin:1rem 0 1.5rem;flex-wrap:wrap;
+    }
+    .step{
+        display:flex;align-items:center;gap:.5rem;
+        background:#fff;border:2px solid var(--slate-300);
+        border-radius:24px;padding:.4rem 1.1rem;font-size:.85rem;
+        font-weight:600;color:var(--slate-600);
+        transition:var(--transition);
+    }
+    .step.active{
+        background:var(--primary-700);
+        border-color:var(--primary-700);color:#fff;
+        box-shadow:0 4px 12px rgba(6,182,212,.3);
+    }
+    .step.done{
+        background:var(--success-50);
+        border-color:var(--success-700);
+        color:var(--success-900);
+    }
+    .step-arrow{color:var(--slate-300);font-size:.95rem}
 
-    /* ── Warn / info boxes ──────────────────────────────── */
+    /* ═══ Alert Boxes ═══ */
     .warn-box{
-        background:var(--amber-50);border-left:4px solid var(--amber-700);
-        padding:.85rem 1.1rem;border-radius:var(--radius-sm);margin:.6rem 0;
-        font-size:.9rem;
+        background:var(--warning-50);
+        border:1px solid var(--warning-700);
+        border-left:4px solid var(--warning-700);
+        padding:1rem 1.3rem;border-radius:var(--radius-md);
+        margin:.8rem 0;font-size:.9rem;color:var(--slate-800);
     }
     .info-box{
-        background:var(--blue-50);border-left:4px solid var(--blue-500);
-        padding:.85rem 1.1rem;border-radius:var(--radius-sm);margin:.6rem 0;
-        font-size:.9rem;
+        background:var(--info-50);
+        border:1px solid var(--info-700);
+        border-left:4px solid var(--info-700);
+        padding:1rem 1.3rem;border-radius:var(--radius-md);
+        margin:.8rem 0;font-size:.9rem;color:var(--slate-800);
     }
 
-    /* ── Divider label ──────────────────────────────────── */
+    /* ═══ Divider ═══ */
     .divider-label{
-        display:flex;align-items:center;gap:.8rem;margin:1.4rem 0;
-        color:var(--grey-600);font-size:.8rem;font-weight:600;
-        text-transform:uppercase;letter-spacing:.8px;
+        display:flex;align-items:center;gap:1rem;
+        margin:2rem 0 1.2rem;
+        color:var(--slate-500);font-size:.75rem;font-weight:700;
+        text-transform:uppercase;letter-spacing:1px;
     }
     .divider-label::before,.divider-label::after{
-        content:'';flex:1;height:1px;background:rgba(0,0,0,.08);
+        content:'';flex:1;height:2px;
+        background:linear-gradient(90deg,transparent,var(--slate-200),transparent);
     }
 
-    /* ── Rank badge ─────────────────────────────────────── */
-    .rank-1{background:linear-gradient(135deg,#FFD700,#FFA000);
-             color:#fff;border-radius:50%;width:28px;height:28px;
-             display:inline-flex;align-items:center;justify-content:center;
-             font-weight:800;font-size:.85rem;box-shadow:0 2px 8px rgba(255,160,0,.4)}
-    .rank-2{background:linear-gradient(135deg,#CFD8DC,#90A4AE);
-             color:#fff;border-radius:50%;width:28px;height:28px;
-             display:inline-flex;align-items:center;justify-content:center;
-             font-weight:800;font-size:.85rem}
-    .rank-3{background:linear-gradient(135deg,#FFAB91,#FF7043);
-             color:#fff;border-radius:50%;width:28px;height:28px;
-             display:inline-flex;align-items:center;justify-content:center;
-             font-weight:800;font-size:.85rem}
-
-    /* ── Sticker table styling ──────────────────────────── */
-    .stDataFrame{border-radius:var(--radius-md) !important;overflow:hidden}
-
-    /* ── Sidebar brand block ────────────────────────────── */
-    .sb-brand{padding:.8rem .6rem 1rem;border-bottom:1px solid rgba(255,255,255,.15);
-              margin-bottom:.8rem}
-    .sb-brand-title{font-size:1.15rem;font-weight:800;color:#fff !important;
-                    letter-spacing:-.3px}
-    .sb-brand-sub{font-size:.72rem;opacity:.6;color:#fff !important}
-
-    .sb-section{font-size:.65rem;font-weight:700;letter-spacing:1.2px;
-                text-transform:uppercase;opacity:.5;
-                color:#fff !important;margin:.9rem 0 .3rem .2rem}
-    .sb-stat{display:flex;justify-content:space-between;align-items:center;
-             padding:.18rem 0;font-size:.82rem}
-    .sb-stat-n{background:rgba(255,255,255,.15);border-radius:10px;
-               padding:.1rem .5rem;font-size:.75rem;font-weight:700}
-
-    /* ── Footer ─────────────────────────────────────────── */
-    .footer{text-align:center;color:var(--grey-300);font-size:.78rem;
-            margin-top:2.5rem;padding-top:1rem;
-            border-top:1px solid rgba(0,0,0,.06)}
-
-    /* ── Streamlit widget polish ────────────────────────── */
-    div[data-testid="stFileUploader"]{
-        border:2px dashed #90CAF9;border-radius:var(--radius-md);
-        background:var(--blue-50);padding:.5rem;
+    /* ═══ Ranking Badges ═══ */
+    .rank-1{
+        background:linear-gradient(135deg,#FBBF24,#F59E0B);
+        color:#fff;border-radius:50%;width:32px;height:32px;
+        display:inline-flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:.9rem;
+        box-shadow:0 4px 12px rgba(245,158,11,.4);
     }
-    div[data-testid="stFileUploader"]:hover{border-color:var(--blue-700)}
-    .stButton>button{border-radius:var(--radius-sm) !important;font-weight:600 !important}
-    .stButton>button[kind="primary"]{
-        background:linear-gradient(135deg,var(--blue-700),var(--blue-900)) !important;
+    .rank-2{
+        background:linear-gradient(135deg,#E5E7EB,#9CA3AF);
+        color:#fff;border-radius:50%;width:32px;height:32px;
+        display:inline-flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:.9rem;
+        box-shadow:0 4px 12px rgba(156,163,175,.3);
     }
-    div[data-testid="stExpander"]{
-        border:1px solid rgba(0,0,0,.06) !important;
+    .rank-3{
+        background:linear-gradient(135deg,#FDBA74,#FB923C);
+        color:#fff;border-radius:50%;width:32px;height:32px;
+        display:inline-flex;align-items:center;justify-content:center;
+        font-weight:800;font-size:.9rem;
+        box-shadow:0 4px 12px rgba(251,146,60,.3);
+    }
+
+    /* ═══ Tables ═══ */
+    .stDataFrame{
         border-radius:var(--radius-md) !important;
+        overflow:hidden;
+        box-shadow:var(--shadow-sm) !important;
+        border:1px solid var(--slate-200) !important;
+    }
+
+    /* ═══ Sidebar Branding ═══ */
+    .sb-brand{
+        padding:1rem .8rem 1.2rem;
+        border-bottom:1px solid rgba(255,255,255,.1);
+        margin-bottom:1rem;
+    }
+    .sb-brand-title{
+        font-size:1.2rem;font-weight:800;color:#fff !important;
+        letter-spacing:-.4px;
+        background:linear-gradient(135deg,#fff,var(--primary-100));
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .sb-brand-sub{
+        font-size:.72rem;opacity:.7;color:var(--slate-300) !important;
+        margin-top:.2rem;
+    }
+
+    .sb-section{
+        font-size:.65rem;font-weight:700;letter-spacing:1.3px;
+        text-transform:uppercase;opacity:.5;
+        color:var(--slate-300) !important;margin:1.2rem 0 .5rem .3rem;
+    }
+    .sb-stat{
+        display:flex;justify-content:space-between;align-items:center;
+        padding:.25rem .3rem;font-size:.85rem;
+    }
+    .sb-stat-n{
+        background:rgba(6,182,212,.2);
+        border-radius:12px;padding:.15rem .6rem;
+        font-size:.75rem;font-weight:700;
+        color:var(--primary-100);
+    }
+
+    /* ═══ Footer ═══ */
+    .footer{
+        text-align:center;color:var(--slate-400);
+        font-size:.8rem;margin-top:3rem;padding-top:1.5rem;
+        border-top:1px solid var(--slate-200);
+    }
+
+    /* ═══ Streamlit Widget Styling ═══ */
+    div[data-testid="stFileUploader"]{
+        border:2px dashed var(--primary-400);
+        border-radius:var(--radius-lg);
+        background:var(--primary-50);padding:.8rem;
+        transition:var(--transition);
+    }
+    div[data-testid="stFileUploader"]:hover{
+        border-color:var(--primary-700);
+        background:var(--primary-100);
+    }
+
+    .stButton>button{
+        border-radius:var(--radius-md) !important;
+        font-weight:600 !important;
+        padding:.6rem 1.5rem !important;
+        transition:var(--transition) !important;
+        border:none !important;
+    }
+    .stButton>button[kind="primary"]{
+        background:linear-gradient(135deg,var(--primary-800),var(--primary-700)) !important;
+        box-shadow:0 4px 12px rgba(6,182,212,.3) !important;
+    }
+    .stButton>button[kind="primary"]:hover{
+        transform:translateY(-2px);
+        box-shadow:0 6px 20px rgba(6,182,212,.4) !important;
+    }
+    .stButton>button[kind="secondary"]{
+        background:var(--slate-100) !important;
+        color:var(--slate-700) !important;
+    }
+    .stButton>button[kind="secondary"]:hover{
+        background:var(--slate-200) !important;
+    }
+
+    div[data-testid="stExpander"]{
+        border:1px solid var(--slate-200) !important;
+        border-radius:var(--radius-md) !important;
+        background:#fff !important;
+        box-shadow:var(--shadow-xs) !important;
+    }
+
+    .stSelectbox > div > div{
+        border-radius:var(--radius-md) !important;
+        border-color:var(--slate-300) !important;
+    }
+    .stSelectbox > div > div:focus-within{
+        border-color:var(--primary-700) !important;
+        box-shadow:0 0 0 1px var(--primary-700) !important;
+    }
+
+    /* ═══ Tabs Styling ═══ */
+    .stTabs [data-baseweb="tab-list"]{
+        gap:.5rem;
+        background:var(--slate-100);
+        padding:.4rem;
+        border-radius:var(--radius-md);
+    }
+    .stTabs [data-baseweb="tab"]{
+        border-radius:var(--radius-sm);
+        padding:.6rem 1.2rem;
+        font-weight:600;
+        color:var(--slate-600);
+    }
+    .stTabs [aria-selected="true"]{
+        background:#fff !important;
+        color:var(--primary-800) !important;
+        box-shadow:var(--shadow-xs);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -493,7 +727,7 @@ def detect_iris_overlay(img_np):
 # Detection result display helpers
 # ═══════════════════════════════════════════════════════════════════════════
 def _show_single_result(model_name, pred_class, confidence, proba):
-    color   = CLASS_COLORS.get(pred_class, '#546E7A')
+    color   = CLASS_COLORS.get(pred_class, '#64748B')
     icon    = CLASS_ICONS.get(pred_class, '🔍')
     css_cls = f"result-{pred_class.lower()}"
 
@@ -509,7 +743,7 @@ def _show_single_result(model_name, pred_class, confidence, proba):
         f"<div class='{css_cls}'>"
         f"{icon}&nbsp;<b>{pred_class}</b>"
         f"&nbsp;—&nbsp;Confidence: <b>{confidence:.1f}%</b>"
-        f"&nbsp;<span style='font-size:.82rem;color:#546E7A'>({conf_note} · {model_name})</span>"
+        f"&nbsp;<span style='font-size:.82rem;color:#64748B'>({conf_note} · {model_name})</span>"
         f"</div>",
         unsafe_allow_html=True,
     )
@@ -741,7 +975,7 @@ def show_home():
          CLASS_COLORS['Myopia']),
         (k2, "3", "Detectable Conditions", CLASS_COLORS['Glaucoma']),
         (k3, "6", "Model Architectures", CLASS_COLORS['Healthy']),
-        (k4, f"{n_trained}/6", "Models Ready", "#6A1B9A" if n_trained < 6 else CLASS_COLORS['Healthy']),
+        (k4, f"{n_trained}/6", "Models Ready", "#2563EB" if n_trained < 6 else CLASS_COLORS['Healthy']),
     ]
     for col, number, label, color in kpi_data:
         with col:
@@ -768,9 +1002,9 @@ def show_home():
                 f"<div class='card' style='border-top:4px solid {color}'>"
                 f"<h3 style='color:{color};margin:0 0 .4rem'>{CLASS_ICONS[cls]} {cls}</h3>"
                 f"<div style='font-size:2rem;font-weight:800;color:{color}'>{n:,}</div>"
-                f"<div style='font-size:.78rem;color:#546E7A;margin:.2rem 0 .6rem'>"
+                f"<div style='font-size:.78rem;color:#64748B;margin:.2rem 0 .6rem'>"
                 f"{pct:.1f}% of dataset</div>"
-                f"<p style='font-size:.82rem;color:#546E7A;margin:0'>{info['description']}</p>"
+                f"<p style='font-size:.82rem;color:#64748B;margin:0'>{info['description']}</p>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -931,7 +1165,7 @@ def show_detection():
                     f"<div class='card' style='border-top:4px solid {info['color']};"
                     f"text-align:center'>"
                     f"<h3 style='color:{info['color']}'>{info['icon']} {cls}</h3>"
-                    f"<p style='font-size:.85rem;color:#546E7A'>{info['description']}</p>"
+                    f"<p style='font-size:.85rem;color:#64748B'>{info['description']}</p>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
@@ -1107,12 +1341,12 @@ def show_evaluation():
     st.markdown("<div class='divider-label'>Overall Metrics</div>", unsafe_allow_html=True)
 
     METRIC_META = [
-        ("Accuracy",  "accuracy",  "Higher is better",  "#1565C0"),
-        ("Precision", "precision", "Higher is better",  "#2E7D32"),
-        ("Recall",    "recall",    "Higher is better",  "#6A1B9A"),
-        ("FAR",       "far",       "Lower is better",   "#C62828"),
-        ("FRR",       "frr",       "Lower is better",   "#E65100"),
-        ("EER",       "eer",       "Lower is better",   "#AD1457"),
+        ("Accuracy",  "accuracy",  "Higher is better",  "#0891B2"),
+        ("Precision", "precision", "Higher is better",  "#10B981"),
+        ("Recall",    "recall",    "Higher is better",  "#2563EB"),
+        ("FAR",       "far",       "Lower is better",   "#DC2626"),
+        ("FRR",       "frr",       "Lower is better",   "#F59E0B"),
+        ("EER",       "eer",       "Lower is better",   "#DC2626"),
     ]
     cols = st.columns(6)
     for col, (label, key, hint, color) in zip(cols, METRIC_META):
@@ -1140,10 +1374,10 @@ def show_evaluation():
                 eer_val = float(d.get('eer', 0)) * 100
                 auc_val = float(d.get('roc_auc', 0))
                 # Colour-code EER: good < 10%, ok < 20%, poor >= 20%
-                eer_color = ('#2E7D32' if eer_val < 10
-                             else '#F9A825' if eer_val < 20 else '#C62828')
-                auc_color = ('#2E7D32' if auc_val >= 0.9
-                             else '#F9A825' if auc_val >= 0.75 else '#C62828')
+                eer_color = ('#10B981' if eer_val < 10
+                             else '#F59E0B' if eer_val < 20 else '#DC2626')
+                auc_color = ('#10B981' if auc_val >= 0.9
+                             else '#F59E0B' if auc_val >= 0.75 else '#DC2626')
                 rows.append({
                     'Class':   f"{CLASS_ICONS[cls]} {cls}",
                     'FAR':     f"{float(d.get('far', 0))*100:.2f}%",
@@ -1179,11 +1413,11 @@ def show_evaluation():
             eer_vals   = [float(per[c].get('eer', 0)) * 100 for c in cls_labels]
             colors     = [CLASS_COLORS[c] for c in cls_labels]
             fig3, ax3  = plt.subplots(figsize=(5, 3.2))
-            fig3.patch.set_facecolor('#FAFBFC')
-            ax3.set_facecolor('#FAFBFC')
+            fig3.patch.set_facecolor('#F8FAFC')
+            ax3.set_facecolor('#F8FAFC')
             bars = ax3.bar(cls_labels, eer_vals, color=colors,
                            edgecolor='white', linewidth=1.5, zorder=3)
-            ax3.yaxis.grid(True, color='#E0E0E0', zorder=0)
+            ax3.yaxis.grid(True, color='#E2E8F0', zorder=0)
             ax3.set_axisbelow(True)
             for bar, val in zip(bars, eer_vals):
                 ax3.text(bar.get_x() + bar.get_width() / 2,
@@ -1235,29 +1469,29 @@ def show_comparison():
 
     with w1:
         st.markdown(
-            "<div class='card' style='border-top:4px solid #1565C0'>"
+            "<div class='card' style='border-top:4px solid #0891B2'>"
             "<div class='kpi-label'>🏆 Highest Accuracy</div>"
-            f"<div class='kpi-number' style='color:#1565C0;font-size:1.5rem'>{best_acc}</div>"
-            f"<div style='color:#546E7A'>{accs[best_acc]*100:.2f}%</div>"
+            f"<div class='kpi-number' style='color:#0891B2;font-size:1.5rem'>{best_acc}</div>"
+            f"<div style='color:#64748B'>{accs[best_acc]*100:.2f}%</div>"
             "</div>",
             unsafe_allow_html=True,
         )
     with w2:
         st.markdown(
-            "<div class='card' style='border-top:4px solid #2E7D32'>"
+            "<div class='card' style='border-top:4px solid #10B981'>"
             "<div class='kpi-label'>🎯 Lowest EER</div>"
-            f"<div class='kpi-number' style='color:#2E7D32;font-size:1.5rem'>{best_eer}</div>"
-            f"<div style='color:#546E7A'>{eers[best_eer]*100:.2f}%</div>"
+            f"<div class='kpi-number' style='color:#10B981;font-size:1.5rem'>{best_eer}</div>"
+            f"<div style='color:#64748B'>{eers[best_eer]*100:.2f}%</div>"
             "</div>",
             unsafe_allow_html=True,
         )
     with w3:
         n = len(metrics_all)
         st.markdown(
-            "<div class='card' style='border-top:4px solid #6A1B9A'>"
+            "<div class='card' style='border-top:4px solid #2563EB'>"
             "<div class='kpi-label'>📊 Models Evaluated</div>"
-            f"<div class='kpi-number' style='color:#6A1B9A;font-size:1.5rem'>{n}</div>"
-            "<div style='color:#546E7A'>of 6 architectures</div>"
+            f"<div class='kpi-number' style='color:#2563EB;font-size:1.5rem'>{n}</div>"
+            "<div style='color:#64748B'>of 6 architectures</div>"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -1291,12 +1525,12 @@ def show_comparison():
 
     def _hbar_chart(labels, values, title, xlabel, highlight, hi_color, lo_color, fmt='.1f'):
         fig, ax = plt.subplots(figsize=(6, max(3, len(labels) * 0.55)))
-        fig.patch.set_facecolor('#FAFBFC')
-        ax.set_facecolor('#FAFBFC')
+        fig.patch.set_facecolor('#F8FAFC')
+        ax.set_facecolor('#F8FAFC')
         colors = [hi_color if m == highlight else lo_color for m in labels]
         bars = ax.barh(labels, values, color=colors,
                        edgecolor='white', linewidth=1.2, zorder=3)
-        ax.xaxis.grid(True, color='#E0E0E0', zorder=0)
+        ax.xaxis.grid(True, color='#E2E8F0', zorder=0)
         ax.set_axisbelow(True)
         for bar, val in zip(bars, values):
             ax.text(val + 0.3, bar.get_y() + bar.get_height() / 2,
@@ -1315,7 +1549,7 @@ def show_comparison():
         acc_vals = [accs[m] * 100 for m in model_labels]
         fig_a = _hbar_chart(model_labels, acc_vals,
                             'Accuracy (%)', 'Accuracy (%)',
-                            best_acc, '#1565C0', '#90CAF9')
+                            best_acc, '#0891B2', '#CFFAFE')
         st.image(fig_to_streamlit(fig_a), width='stretch')
 
     with col_b:
@@ -1323,7 +1557,7 @@ def show_comparison():
         eer_vals = [eers[m] * 100 for m in model_labels]
         fig_e = _hbar_chart(model_labels, eer_vals,
                             'Equal Error Rate (%)', 'EER (%)',
-                            best_eer, '#2E7D32', '#A5D6A7', fmt='.2f')
+                            best_eer, '#10B981', '#D1FAE5', fmt='.2f')
         st.image(fig_to_streamlit(fig_e), width='stretch')
 
     # ── ROC-AUC heat table ────────────────────────────────────────────────
@@ -1363,8 +1597,8 @@ def show_training():
     d_cols = st.columns(4)
     with d_cols[0]:
         st.markdown(
-            f"<div class='kpi-card' style='border-top:4px solid #1565C0'>"
-            f"<div class='kpi-number' style='color:#1565C0'>{total_imgs:,}</div>"
+            f"<div class='kpi-card' style='border-top:4px solid #0891B2'>"
+            f"<div class='kpi-number' style='color:#0891B2'>{total_imgs:,}</div>"
             f"<div class='kpi-label'>Total Images</div></div>",
             unsafe_allow_html=True,
         )
@@ -1377,7 +1611,7 @@ def show_training():
                 f"<div class='kpi-card' style='border-top:4px solid {color}'>"
                 f"<div class='kpi-number' style='color:{color}'>{n:,}</div>"
                 f"<div class='kpi-label'>{CLASS_ICONS[cls]} {cls}</div>"
-                f"<div style='font-size:.75rem;color:#546E7A'>{pct:.1f}% of dataset</div>"
+                f"<div style='font-size:.75rem;color:#64748B'>{pct:.1f}% of dataset</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -1398,7 +1632,7 @@ def show_training():
     for col, mname in zip(status_cols, MODEL_PATHS):
         mtype, micon = MODEL_TYPES[mname]
         ready = model_available(mname)
-        border = '#2E7D32' if ready else '#B0BEC5'
+        border = '#10B981' if ready else '#CBD5E1'
         badge = ("<span class='badge badge-green'>✓ Ready</span>"
                  if ready else
                  "<span class='badge badge-grey'>Not trained</span>")
@@ -1407,9 +1641,9 @@ def show_training():
                 f"<div class='card' style='border-top:3px solid {border};text-align:center'>"
                 f"<div style='font-size:1.4rem'>{micon}</div>"
                 f"<b style='font-size:.88rem'>{mname}</b><br>"
-                f"<span style='font-size:.72rem;color:#546E7A'>{mtype}</span><br>"
+                f"<span style='font-size:.72rem;color:#64748B'>{mtype}</span><br>"
                 f"<div style='margin:.5rem 0'>{badge}</div>"
-                f"<div style='font-size:.72rem;color:#90A4AE'>~{TRAIN_TIME[mname]}</div>"
+                f"<div style='font-size:.72rem;color:#94A3B8'>~{TRAIN_TIME[mname]}</div>"
                 f"</div>",
                 unsafe_allow_html=True,
             )
