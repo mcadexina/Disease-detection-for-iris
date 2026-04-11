@@ -2,11 +2,15 @@
 set -e
 
 echo "Upgrading pip..."
-pip install --upgrade pip
+python -m pip install --upgrade pip
 
-echo "Installing tensorflow-cpu and keras..."
-pip install tensorflow-cpu==2.12.0
-pip install keras==2.12.0
+# If this repo uses Git LFS (e.g. *.h5 models), pull the actual binaries.
+# This is best-effort: it will no-op if git-lfs isn't installed.
+if command -v git >/dev/null 2>&1 && command -v git-lfs >/dev/null 2>&1; then
+  echo "Pulling Git LFS assets..."
+  git lfs install --local || true
+  git lfs pull || true
+fi
 
-echo "Installing other dependencies..."
-pip install -r requirements.txt
+echo "Installing dependencies..."
+python -m pip install -r requirements.txt

@@ -22,14 +22,6 @@ import streamlit as st
 from PIL import Image
 from io import BytesIO
 
-# ── Page config (must be the very first Streamlit call) ────────────────────
-st.set_page_config(
-    page_title="Iris Disease Detection",
-    page_icon="👁",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
 # ── Path constants (always absolute, regardless of CWD) ────────────────────
 BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
 SAVED_MODELS_DIR = os.path.join(BASE_DIR, "saved_models")
@@ -51,6 +43,7 @@ CLASS_ICONS = {
 }
 
 MODEL_PATHS = {
+    'Xception':    os.path.join(SAVED_MODELS_DIR, 'xception_iris.h5'),
     'ResNet50':    os.path.join(SAVED_MODELS_DIR, 'resnet50_iris.h5'),
     'SVM (Gabor)': os.path.join(SAVED_MODELS_DIR, 'svm_gabor.pkl'),
     'RF (Wavelet)':os.path.join(SAVED_MODELS_DIR, 'rf_wavelet.pkl'),
@@ -591,8 +584,62 @@ def load_metrics():
         return json.load(f)
 
 
+_LFS_PULL_ATTEMPTED = set()
+
+
+def _is_lfs_pointer_file(path):
+    try:
+        with open(path, 'rb') as f:
+            head = f.read(200)
+        return head.startswith(b"version https://git-lfs.github.com/spec/v1")
+    except OSError:
+        return False
+
+
+def _try_git_lfs_pull(path):
+    rel = os.path.relpath(path, BASE_DIR).replace('\\', '/')
+    if rel in _LFS_PULL_ATTEMPTED:
+        return
+    _LFS_PULL_ATTEMPTED.add(rel)
+
+    try:
+        subprocess.run(
+            ['git', 'lfs', 'install', '--local'],
+            cwd=BASE_DIR,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        res = subprocess.run(
+            ['git', 'lfs', 'pull', '--include', rel, '--exclude', ''],
+            cwd=BASE_DIR,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if res.returncode != 0:
+            subprocess.run(
+                ['git', 'lfs', 'pull'],
+                cwd=BASE_DIR,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+    except Exception:
+        # If git / git-lfs isn't available (or no .git dir), just fall back to existing files.
+        pass
+
+
+def _ensure_real_file(path):
+    if not os.path.exists(path):
+        return False
+    if _is_lfs_pointer_file(path):
+        _try_git_lfs_pull(path)
+    return os.path.exists(path) and not _is_lfs_pointer_file(path)
+
+
 def model_available(model_name):
-    return os.path.exists(MODEL_PATHS[model_name])
+    return _ensure_real_file(MODEL_PATHS[model_name])
 
 
 def available_models():
@@ -601,25 +648,64 @@ def available_models():
 
 @st.cache_resource(show_spinner=False)
 def _load_keras_model(path):
+    if not _ensure_real_file(path):
+        rel = os.path.relpath(path, BASE_DIR)
+        raise FileNotFoundError(
+            f"Model file not available: {rel}. If deploying with Git LFS, ensure LFS objects are pulled."
+        )
     import tensorflow as tf
     return tf.keras.models.load_model(path)
 
 
 @st.cache_resource(show_spinner=False)
 def _load_pickle_model(path):
+    if not _ensure_real_file(path):
+        rel = os.path.relpath(path, BASE_DIR)
+        raise FileNotFoundError(
+            f"Model file not available: {rel}. If deploying with Git LFS, ensure LFS objects are pulled."
+        )
     with open(path, 'rb') as f:
         return pickle.load(f)
 
 
-def preprocess_for_dl(img_np, size=IMG_SIZE_DL):
+def preprocess_for_dl(img_np, model_name, size=IMG_SIZE_DL, preprocess_mode=None):
+    """Prepare an image for DL inference.
+
+    preprocess_mode:
+      - None: model default
+      - For ResNet50: 'auto' | 'legacy_01' | 'imagenet'
+    """
     if img_np.ndim == 2:
         img_np = cv2.cvtColor(img_np, cv2.COLOR_GRAY2RGB)
     elif img_np.shape[2] == 1:
         img_np = cv2.cvtColor(img_np[:, :, 0], cv2.COLOR_GRAY2RGB)
     elif img_np.shape[2] == 4:
         img_np = cv2.cvtColor(img_np, cv2.COLOR_RGBA2RGB)
-    img = cv2.resize(img_np, size).astype(np.float32) / 255.0
-    return img[np.newaxis]
+
+    img = cv2.resize(img_np, size).astype(np.float32)
+
+    if model_name == 'Xception':
+        import tensorflow as tf
+        img = tf.keras.applications.xception.preprocess_input(img)
+        return img[np.newaxis]
+
+    if model_name == 'ResNet50':
+        import tensorflow as tf
+        mode = preprocess_mode or 'auto'
+
+        if mode == 'legacy_01':
+            return (img / 255.0)[np.newaxis]
+        if mode == 'imagenet':
+            return tf.keras.applications.resnet50.preprocess_input(img)[np.newaxis]
+
+        # auto: return both variants so the caller can choose
+        return {
+            'legacy_01': (img / 255.0)[np.newaxis],
+            'imagenet': tf.keras.applications.resnet50.preprocess_input(img.copy())[np.newaxis],
+        }
+
+    # Default for other DL models trained on [0, 1]
+    return (img / 255.0)[np.newaxis]
 
 
 def preprocess_for_cnn(img_np, size=IMG_SIZE_CNN):
@@ -644,12 +730,10 @@ def preprocess_for_ml(img_np, method):
     return extract_features(gray)
 
 
-def run_inference(img_np, model_name):
-    """
-    Run inference with the chosen model.
-    Returns (predicted_class_str, confidence_float, probabilities_list).
-    """
+def run_inference(img_np, model_name, preprocess_mode=None):
+    """Run inference and return (pred_class, confidence_pct, proba_list, meta_dict)."""
     path = MODEL_PATHS[model_name]
+    meta = {}
 
     if model_name in ('SVM (Gabor)', 'RF (Wavelet)'):
         method = 'gabor' if 'Gabor' in model_name else 'wavelet'
@@ -657,15 +741,29 @@ def run_inference(img_np, model_name):
         feat = preprocess_for_ml(img_np, method).reshape(1, -1)
         proba = clf.predict_proba(feat)[0]
     else:
-        # ResNet50 deep learning model
         model = _load_keras_model(path)
-        tensor = preprocess_for_dl(img_np)
-        proba = model.predict(tensor, verbose=0)[0]
 
-    pred_idx     = int(np.argmax(proba))
-    pred_class   = CLASSES[pred_idx]
-    confidence   = float(proba[pred_idx]) * 100
-    return pred_class, confidence, proba.tolist()
+        if model_name == 'ResNet50' and (preprocess_mode or 'auto') == 'auto':
+            tensors = preprocess_for_dl(img_np, model_name, preprocess_mode='auto')
+            proba_legacy = model.predict(tensors['legacy_01'], verbose=0)[0]
+            proba_imgnet = model.predict(tensors['imagenet'], verbose=0)[0]
+
+            if float(np.max(proba_imgnet)) >= float(np.max(proba_legacy)):
+                proba = proba_imgnet
+                meta['preprocess'] = 'imagenet'
+            else:
+                proba = proba_legacy
+                meta['preprocess'] = 'legacy_01'
+        else:
+            tensor = preprocess_for_dl(img_np, model_name, preprocess_mode=preprocess_mode)
+            proba = model.predict(tensor, verbose=0)[0]
+            if model_name == 'ResNet50' and preprocess_mode:
+                meta['preprocess'] = preprocess_mode
+
+    pred_idx   = int(np.argmax(proba))
+    pred_class = CLASSES[pred_idx]
+    confidence = float(proba[pred_idx]) * 100
+    return pred_class, confidence, proba.tolist(), meta
 
 
 def fig_to_streamlit(fig):
@@ -768,7 +866,7 @@ def _show_single_result(model_name, pred_class, confidence, proba):
         ax.set_title(f'{model_name} — Output Probabilities', fontsize=10)
         ax.invert_yaxis()
         plt.tight_layout()
-        st.image(fig_to_streamlit(fig), width='content')
+        st.image(fig_to_streamlit(fig), use_container_width=True)
     else:
         st.warning(f"Unexpected probability vector length {len(proba)}.")
 
@@ -790,7 +888,7 @@ def _show_multi_model_results(results):
                 'Confidence': f"{r['conf']:.1f}%",
                 'Note': '',
             })
-    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
     # Consensus banner
     preds = [r['pred'] for r in results.values() if 'pred' in r]
@@ -829,7 +927,7 @@ def _show_multi_model_results(results):
             ax.invert_yaxis()
             ax.tick_params(labelsize=8)
         plt.tight_layout()
-        st.image(fig_to_streamlit(fig), width='stretch')
+        st.image(fig_to_streamlit(fig), use_container_width=True)
 
 
 def _show_disease_info(pred_class):
@@ -1021,7 +1119,7 @@ def show_home():
 | **1** | Collect iris images (Healthy / Glaucoma / Myopia) |
 | **2** | Preprocess: grayscale → CLAHE → resize to 224×224 |
 | **3** | Feature extraction: **Gabor Filter** → SVM · **Wavelet** → RF |
-| **4** | Deep learning: **ResNet50** (transfer learning) |
+| **4** | Deep learning: **Xception · ResNet50** (transfer learning) |
 | **5** | Evaluate: Accuracy · FAR · FRR · EER · ROC-AUC |
 | **6** | Prototype screening system in Streamlit |
 """)
@@ -1029,12 +1127,12 @@ def show_home():
     with c2:
         st.markdown("### 🤖 Model Architecture Summary")
         data = {
-            'Model': ['ResNet50', 'SVM (Gabor)', 'RF (Wavelet)'],
-            'Category': ['Deep Learning 🧠', 'Machine Learning ⚙️', 'Machine Learning ⚙️'],
-            'Feature Extraction': ['ImageNet transfer', 'Gabor filter', '2D Wavelet DWT'],
-            'Validation': ['Train/Val/Test split', '5-Fold CV', '5-Fold CV'],
+            'Model': ['Xception', 'ResNet50', 'SVM (Gabor)', 'RF (Wavelet)'],
+            'Category': ['Deep Learning 🧠', 'Deep Learning 🧠', 'Machine Learning ⚙️', 'Machine Learning ⚙️'],
+            'Feature Extraction': ['ImageNet transfer', 'ImageNet transfer', 'Gabor filter', '2D Wavelet DWT'],
+            'Validation': ['Train/Val/Test split', 'Train/Val/Test split', '5-Fold CV', '5-Fold CV'],
         }
-        st.dataframe(pd.DataFrame(data), width='stretch', hide_index=True)
+        st.dataframe(pd.DataFrame(data), use_container_width=True, hide_index=True)
 
     # ── CTA ────────────────────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>Get Started</div>", unsafe_allow_html=True)
@@ -1048,7 +1146,7 @@ def show_home():
         cta_col, _, _ = st.columns([1, 1, 2])
         with cta_col:
             if st.button("🔍 Run Disease Detection →", type="primary",
-                         width='stretch'):
+                         use_container_width=True):
                 st.session_state.page = "🔍 Disease Detection"
                 st.rerun()
 
@@ -1149,6 +1247,18 @@ def show_detection():
             model_choice = None
         show_iris_detect  = st.checkbox("Show iris detection overlay", value=True)
         show_preprocess   = st.checkbox("Show preprocessing pipeline", value=False)
+
+        # ResNet50 models are frequently trained with different input scaling.
+        # Auto mode tries both common preprocessings and picks the one with the higher max probability.
+        resnet_mode = None
+        if ("ResNet50" in avail) and (run_all or model_choice == "ResNet50"):
+            resnet_mode = st.selectbox(
+                "ResNet50 input preprocessing",
+                ["Auto (recommended)", "Legacy (0–1 scaling)", "ImageNet (preprocess_input)"],
+                index=0,
+                help="If predictions look wrong, this is usually the cause. Auto tries both and picks the best.",
+            )
+
         if st.button("🔄 Refresh models"):
             st.cache_resource.clear()
             st.rerun()
@@ -1206,8 +1316,11 @@ def show_detection():
     w, h = quality['resolution']
     with col_img:
         st.markdown("**Uploaded Image**")
-        st.image(img_np, caption=f"{w}×{h} px  ·  {uploaded.name}",
-                 width='stretch')
+        st.image(
+            img_np,
+            caption=f"{w}×{h} px  ·  {uploaded.name}",
+            use_container_width=True,
+        )
 
     with col_overlay:
         if show_iris_detect:
@@ -1215,13 +1328,17 @@ def show_detection():
             with st.spinner("Detecting iris boundary…"):
                 annotated, iris_found = detect_iris_overlay(img_np)
             if iris_found:
-                st.image(annotated,
-                         caption="🟢 Green circle = iris boundary  ·  Orange dot = centre",
-                         width='stretch')
+                st.image(
+                    annotated,
+                    caption="🟢 Green circle = iris boundary  ·  Orange dot = centre",
+                    use_container_width=True,
+                )
             else:
-                st.image(img_np,
-                         caption="⚠️ No iris circle detected automatically",
-                         width='stretch')
+                st.image(
+                    img_np,
+                    caption="⚠️ No iris circle detected automatically",
+                    use_container_width=True,
+                )
                 st.markdown(
                     "<div class='warn-box'>Could not auto-detect the iris boundary. "
                     "Make sure the image is a close-up eye or iris photo. "
@@ -1245,9 +1362,11 @@ def show_detection():
             with st.spinner("Preprocessing image…"):
                 try:
                     fig = show_preprocessing_steps(img_np)
-                    st.image(fig_to_streamlit(fig),
-                             caption="Original → Grayscale → CLAHE → Resized",
-                             width='stretch')
+                    st.image(
+                        fig_to_streamlit(fig),
+                        caption="Original → Grayscale → CLAHE → Resized",
+                        use_container_width=True,
+                    )
                 except Exception as e:
                     st.warning(f"Preprocessing visualisation failed: {e}")
 
@@ -1259,11 +1378,19 @@ def show_detection():
     results       = {}
     progress_bar  = st.progress(0, text="Running inference…")
 
+    resnet_mode_map = {
+        "Auto (recommended)": "auto",
+        "Legacy (0–1 scaling)": "legacy_01",
+        "ImageNet (preprocess_input)": "imagenet",
+    }
+    selected_resnet_mode = resnet_mode_map.get(resnet_mode, None) if 'resnet_mode' in locals() else None
+
     for i, mname in enumerate(models_to_run):
         with st.spinner(f"Running {mname}…"):
             try:
-                pred_class, confidence, proba = run_inference(img_np, mname)
-                results[mname] = {'pred': pred_class, 'conf': confidence, 'proba': proba}
+                pp_mode = selected_resnet_mode if mname == 'ResNet50' else None
+                pred_class, confidence, proba, meta = run_inference(img_np, mname, preprocess_mode=pp_mode)
+                results[mname] = {'pred': pred_class, 'conf': confidence, 'proba': proba, **meta}
             except FileNotFoundError as e:
                 results[mname] = {'error': str(e)}
             except Exception as e:
@@ -1293,6 +1420,8 @@ def show_detection():
                     st.code(r['traceback'])
             return
         _show_single_result(mname, r['pred'], r['conf'], r['proba'])
+        if mname == 'ResNet50' and 'preprocess' in r:
+            st.caption(f"ResNet50 preprocessing used: `{r['preprocess']}`")
         majority = r['pred']
 
     # ── Disease information card ──────────────────────────────────────────
@@ -1385,7 +1514,7 @@ def show_evaluation():
                     'EER':     f"{eer_val:.2f}%",
                     'ROC-AUC': f"{auc_val:.4f}",
                 })
-        st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
         st.info("Per-class breakdown not available for this model.")
 
@@ -1398,7 +1527,7 @@ def show_evaluation():
         if per and all('fpr' in per.get(c, {}) for c in CLASSES if c in per):
             from utils.evaluation import plot_roc_curves
             fig_roc = plot_roc_curves(m, CLASSES, title=f"ROC — {selected}")
-            st.image(fig_to_streamlit(fig_roc), width='stretch')
+            st.image(fig_to_streamlit(fig_roc), use_container_width=True)
         else:
             st.markdown(
                 "<div class='info-box'>ℹ️ Full ROC data is only stored for deep learning "
@@ -1429,7 +1558,7 @@ def show_evaluation():
             ax3.spines['top'].set_visible(False)
             ax3.spines['right'].set_visible(False)
             plt.tight_layout()
-            st.image(fig_to_streamlit(fig3), width='stretch')
+            st.image(fig_to_streamlit(fig3), use_container_width=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1515,7 +1644,7 @@ def show_comparison():
             'FRR':       f"{float(mv.get('frr', 0))*100:.2f}%",
             'EER':       f"{float(mv.get('eer', 0))*100:.2f}%",
         })
-    st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
+    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
     # ── Visual comparison charts ───────────────────────────────────────────
     st.markdown("<div class='divider-label'>Visual Comparison</div>",
@@ -1550,7 +1679,7 @@ def show_comparison():
         fig_a = _hbar_chart(model_labels, acc_vals,
                             'Accuracy (%)', 'Accuracy (%)',
                             best_acc, '#0891B2', '#CFFAFE')
-        st.image(fig_to_streamlit(fig_a), width='stretch')
+        st.image(fig_to_streamlit(fig_a), use_container_width=True)
 
     with col_b:
         st.markdown("**EER Ranking** *(lower = better)*")
@@ -1558,7 +1687,7 @@ def show_comparison():
         fig_e = _hbar_chart(model_labels, eer_vals,
                             'Equal Error Rate (%)', 'EER (%)',
                             best_eer, '#10B981', '#D1FAE5', fmt='.2f')
-        st.image(fig_to_streamlit(fig_e), width='stretch')
+        st.image(fig_to_streamlit(fig_e), use_container_width=True)
 
     # ── ROC-AUC heat table ────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>ROC-AUC by Class</div>",
@@ -1572,7 +1701,7 @@ def show_comparison():
                for cls in CLASSES},
         })
     if roc_rows:
-        st.dataframe(pd.DataFrame(roc_rows), width='stretch', hide_index=True)
+        st.dataframe(pd.DataFrame(roc_rows), use_container_width=True, hide_index=True)
         st.markdown(
             "<div class='info-box'>ℹ️ ROC-AUC closer to 1.0 is better. "
             "ML models (SVM, RF) may show 0.0 if full curve data was not stored.</div>",
@@ -1620,11 +1749,13 @@ def show_training():
     st.markdown("<div class='divider-label'>Current Model Status</div>",
                 unsafe_allow_html=True)
     MODEL_TYPES = {
+        'Xception':    ('Deep Learning', '🧠'),
         'ResNet50':    ('Deep Learning', '🧠'),
         'SVM (Gabor)': ('Machine Learning', '⚙️'),
         'RF (Wavelet)':('Machine Learning', '⚙️'),
     }
     TRAIN_TIME = {
+        'Xception':    '45–90 min',
         'ResNet50':    '30–60 min',
         'SVM (Gabor)': '~5–15 min',  'RF (Wavelet)':'~5–15 min',
     }
@@ -1675,8 +1806,10 @@ def show_training():
              f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models svm,rf'),
             ("Step 2 — ResNet50 deep learning (~30–60 min)",
              f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models resnet50'),
-            ("Or train all 3 models at once",
-             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models svm,rf,resnet50'),
+            ("Step 3 — Xception deep learning (~45–90 min)",
+             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models xception'),
+            ("Or train all 4 models at once",
+             f'cd "{BASE_FWD}" && "{venv_python}" train_disease_models.py --models svm,rf,resnet50,xception'),
         ]
         for label, cmd_str in steps:
             st.markdown(f"**{label}**")
@@ -1686,22 +1819,25 @@ def show_training():
             {'Model': 'SVM (Gabor)',  'Type': 'ML',            'Estimated Time': '~5–15 min'},
             {'Model': 'RF (Wavelet)', 'Type': 'ML',            'Estimated Time': '~5–15 min'},
             {'Model': 'ResNet50',     'Type': 'DL Transfer',   'Estimated Time': '~30–60 min'},
-        ]), width='stretch', hide_index=True)
+            {'Model': 'Xception',     'Type': 'DL Transfer',   'Estimated Time': '~45–90 min'},
+        ]), use_container_width=True, hide_index=True)
 
     # ── Tab B: Launch from App ────────────────────────────────────────────
     with tab_b:
         st.markdown(
-            "<div class='warn-box'>⚠️ Streamlit may time out for ResNet50 training. "
+            "<div class='warn-box'>⚠️ Streamlit may time out for deep learning models (ResNet50, Xception). "
             "Use the Terminal tab for long-running jobs.</div>",
             unsafe_allow_html=True,
         )
         st.markdown("**Select models to train:**")
         model_flags = {
+            'Xception':    st.checkbox('Xception', value=False),
             'ResNet50':    st.checkbox('ResNet50', value=False),
             'SVM (Gabor)': st.checkbox('SVM + Gabor (5-fold CV)', value=True),
             'RF (Wavelet)':st.checkbox('RF + Wavelet (5-fold CV)', value=True),
         }
         MODEL_KEYS = {
+            'Xception': 'xception',
             'ResNet50': 'resnet50',
             'SVM (Gabor)': 'svm', 'RF (Wavelet)': 'rf',
         }
@@ -1765,7 +1901,7 @@ def show_about():
             "<ol>"
             "<li>Collect relevant images of normal and infected iris images</li>"
             "<li>Apply <b>Gabor Filter</b> and <b>2D Wavelet Transform</b> for ML feature extraction; "
-            "apply <b>ResNet50</b> as the deep learning method</li>"
+            "apply <b>Xception and ResNet50</b> as the deep learning methods</li>"
             "<li>Evaluate models using Accuracy, Precision, FAR, FRR, EER, ROC Curve</li>"
             "<li>Implement a prototype screening system (this app) using the best-performing model</li>"
             "</ol>"
@@ -1806,7 +1942,7 @@ def show_about():
 | **Preprocessing** | Grayscale → CLAHE → Gaussian blur → Resize to 224×224 |
 | **Iris segmentation** | Hough Circle Transform (OpenCV) |
 | **ML features** | Gabor filter (→ SVM) · 2D Wavelet DWT (→ RF, 5-fold CV) |
-| **DL models** | ResNet50 (ImageNet transfer learning + fine-tune) |
+| **DL models** | Xception, ResNet50 (ImageNet transfer learning + fine-tune) |
 | **Metrics** | Accuracy, Precision, Recall, F1, FAR, FRR, EER, ROC-AUC |
 | **Framework** | Python · TensorFlow/Keras · scikit-learn · Streamlit |
 """)
@@ -1840,6 +1976,14 @@ def show_about():
 # App entry
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
+    # ── Page config (must be the very first Streamlit call) ────────────────
+    st.set_page_config(
+        page_title="Iris Disease Detection",
+        page_icon="👁",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+    
     apply_custom_css()
     if "page" not in st.session_state:
         st.session_state.page = "🏠 Home"

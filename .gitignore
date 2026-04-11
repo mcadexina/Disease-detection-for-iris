@@ -19,6 +19,9 @@ build/
 # Streamlit settings - don't ignore
 # .streamlit/
 
+# Streamlit secrets (set these in Streamlit Cloud UI)
+.streamlit/secrets.toml
+
 # User uploaded files
 uploads/*
 !uploads/.gitkeep
@@ -35,11 +38,15 @@ events.out.tfevents.*
 *.bak
 
 # Keep empty directories
-# Make sure module directories are included
-!models/
-!utils/
-!models/**/*
-!utils/**/*
 
 # Don't ignore __init__.py files
 !**/__init__.py
+
+# Ensure bytecode stays ignored even with later negation rules
+models/**/__pycache__/
+utils/**/__pycache__/
+models/**/*.py[cod]
+utils/**/*.py[cod]
+
+# Training logs
+saved_models/*.log

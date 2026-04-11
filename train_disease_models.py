@@ -68,7 +68,7 @@ METRICS_PATH     = os.path.join(SAVED_MODELS_DIR, 'metrics.json')
 
 # ── Hyper-parameters ───────────────────────────────────────────────────────
 BATCH_SIZE = 32
-EPOCHS = 30
+EPOCHS = 3
 IMG_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.bmp'}
 
 
@@ -92,7 +92,8 @@ def load_image_paths():
     return paths, labels
 
 
-def load_images_for_dl(paths, labels, img_size, grayscale=False, max_per_class=None):
+def load_images_for_dl(paths, labels, img_size, grayscale=False,
+                       max_per_class=None, preprocess_fn=None):
     """
     Load images into numpy arrays for deep-learning models.
     Returns (X, y) with X shape (N, H, W, C).
@@ -115,7 +116,11 @@ def load_images_for_dl(paths, labels, img_size, grayscale=False, max_per_class=N
             else:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 img = cv2.resize(img, img_size)
-                img = img.astype(np.float32) / 255.0
+                if preprocess_fn is not None:
+                    # Keras application preprocessors expect float input and return model-ready tensors.
+                    img = preprocess_fn(img.astype(np.float32))
+                else:
+                    img = img.astype(np.float32) / 255.0
 
             X.append(img)
             y.append(label)
@@ -187,12 +192,18 @@ def evaluate_ml_model(clf, X_test, y_test):
 # Individual model trainers
 # ═══════════════════════════════════════════════════════════════════════════
 def train_deep_model(name, factory_fn, img_size, grayscale, model_path,
-                       paths, labels, max_per_class=1500):
+                     paths, labels, max_per_class=1500, preprocess_fn=None):
     print(f"\n{'='*60}\n[TRAIN] {name}\n{'='*60}")
     t0 = time.time()
 
-    X, y = load_images_for_dl(paths, labels, img_size, grayscale,
-                               max_per_class=max_per_class)
+    X, y = load_images_for_dl(
+        paths,
+        labels,
+        img_size,
+        grayscale,
+        max_per_class=max_per_class,
+        preprocess_fn=preprocess_fn,
+    )
     if len(X) == 0:
         print(f"[ERROR] No data loaded for {name}. Skipping.")
         return None
@@ -298,33 +309,39 @@ def main(train_which='all'):
 
     # ── Xception ─────────────────────────────────────────────────────────
     if _should_train('xception'):
+        xception_preprocess = tf.keras.applications.xception.preprocess_input
         m = train_deep_model(
             'Xception', create_xception_model,
             IMG_SIZE, grayscale=False,
             model_path=os.path.join(SAVED_MODELS_DIR, 'xception_iris.h5'),
             paths=paths, labels=labels,
+            preprocess_fn=xception_preprocess,
         )
         if m:
             metrics_all['Xception'] = m
 
     # ── ResNet50 ──────────────────────────────────────────────────────────
     if _should_train('resnet50'):
+        resnet_preprocess = tf.keras.applications.resnet50.preprocess_input
         m = train_deep_model(
             'ResNet50', create_resnet50_model,
             IMG_SIZE, grayscale=False,
             model_path=os.path.join(SAVED_MODELS_DIR, 'resnet50_iris.h5'),
             paths=paths, labels=labels,
+            preprocess_fn=resnet_preprocess,
         )
         if m:
             metrics_all['ResNet50'] = m
 
     # ── MobileNet ─────────────────────────────────────────────────────────
     if _should_train('mobilenet'):
+        mobilenet_preprocess = tf.keras.applications.mobilenet_v2.preprocess_input
         m = train_deep_model(
             'MobileNet', create_mobilenet_model,
             IMG_SIZE, grayscale=False,
             model_path=os.path.join(SAVED_MODELS_DIR, 'mobilenet_iris.h5'),
             paths=paths, labels=labels,
+            preprocess_fn=mobilenet_preprocess,
         )
         if m:
             metrics_all['MobileNet'] = m
