@@ -1120,7 +1120,7 @@ def show_home():
 | **2** | Preprocess: grayscale → CLAHE → resize to 224×224 |
 | **3** | Feature extraction: **Gabor Filter** → SVM · **Wavelet** → RF |
 | **4** | Deep learning: **Xception · ResNet50** (transfer learning) |
-| **5** | Evaluate: Accuracy · FAR · FRR · EER · ROC-AUC |
+| **5** | Evaluate: Accuracy · FAR · FRR · EER · AUC |
 | **6** | Prototype screening system in Streamlit |
 """)
 
@@ -1447,7 +1447,7 @@ def show_evaluation():
     st.markdown('<h1 class="main-header">Model Evaluation</h1>', unsafe_allow_html=True)
     st.markdown(
         '<p class="page-sub">Deep-dive into any trained model — '
-        'Accuracy · FAR · FRR · EER · ROC curves · Per-class breakdown</p>',
+        'Accuracy · Precision · Recall · F1 · FAR · FRR · EER · AUC · Per-class breakdown</p>',
         unsafe_allow_html=True,
     )
 
@@ -1469,18 +1469,39 @@ def show_evaluation():
     # ── Metric tile row ───────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>Overall Metrics</div>", unsafe_allow_html=True)
 
+    def _metric_value(key):
+        if key == 'roc_auc':
+            if isinstance(m.get('roc_auc', None), (int, float)):
+                return float(m['roc_auc'])
+            if per:
+                aucs = [float(per[c].get('roc_auc', 0)) for c in CLASSES if c in per]
+                aucs = [a for a in aucs if a > 0]
+                return float(np.mean(aucs)) if aucs else None
+            return None
+        val = m.get(key, None)
+        return float(val) if isinstance(val, (int, float)) else None
+
     METRIC_META = [
         ("Accuracy",  "accuracy",  "Higher is better",  "#0891B2"),
         ("Precision", "precision", "Higher is better",  "#10B981"),
         ("Recall",    "recall",    "Higher is better",  "#2563EB"),
+        ("F1-score",  "f1",        "Higher is better",  "#7C3AED"),
+        ("AUC",       "roc_auc",   "Higher is better",  "#0EA5E9"),
         ("FAR",       "far",       "Lower is better",   "#DC2626"),
         ("FRR",       "frr",       "Lower is better",   "#F59E0B"),
         ("EER",       "eer",       "Lower is better",   "#DC2626"),
     ]
-    cols = st.columns(6)
+
+    cols = st.columns(len(METRIC_META))
     for col, (label, key, hint, color) in zip(cols, METRIC_META):
-        val = m.get(key, None)
-        display = f"{float(val)*100:.2f}%" if isinstance(val, (int, float)) else "N/A"
+        val = _metric_value(key)
+        if val is None:
+            display = "N/A"
+        elif key == 'roc_auc':
+            display = f"{val:.4f}"
+        else:
+            display = f"{val*100:.2f}%"
+
         with col:
             st.markdown(
                 f"<div class='metric-tile'>"
@@ -1511,29 +1532,47 @@ def show_evaluation():
                     'Class':   f"{CLASS_ICONS[cls]} {cls}",
                     'FAR':     f"{float(d.get('far', 0))*100:.2f}%",
                     'FRR':     f"{float(d.get('frr', 0))*100:.2f}%",
-                    'EER':     f"{eer_val:.2f}%",
-                    'ROC-AUC': f"{auc_val:.4f}",
+                    'EER': f"{eer_val:.2f}%",
+                    'AUC': f"{auc_val:.4f}",
                 })
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
         st.info("Per-class breakdown not available for this model.")
 
-    # ── ROC curves + EER bar ──────────────────────────────────────────────
+    # ── AUC + EER visuals (no ROC curves) ──────────────────────────────────
     st.markdown("<div class='divider-label'>Visual Analysis</div>", unsafe_allow_html=True)
-    col_roc, col_eer = st.columns(2)
+    col_auc, col_eer = st.columns(2)
 
-    with col_roc:
-        st.markdown("**ROC Curves**")
-        if per and all('fpr' in per.get(c, {}) for c in CLASSES if c in per):
-            from utils.evaluation import plot_roc_curves
-            fig_roc = plot_roc_curves(m, CLASSES, title=f"ROC — {selected}")
-            st.image(fig_to_streamlit(fig_roc), use_container_width=True)
+    with col_auc:
+        st.markdown("**AUC per Class (One-vs-Rest)**")
+        if per:
+            cls_labels = [c for c in CLASSES if c in per]
+            auc_vals   = [float(per[c].get('roc_auc', 0)) for c in cls_labels]
+            colors     = [CLASS_COLORS[c] for c in cls_labels]
+
+            if any(a > 0 for a in auc_vals):
+                fig_auc, ax_auc = plt.subplots(figsize=(5, 3.2))
+                fig_auc.patch.set_facecolor('#F8FAFC')
+                ax_auc.set_facecolor('#F8FAFC')
+                bars = ax_auc.bar(cls_labels, auc_vals, color=colors,
+                                  edgecolor='white', linewidth=1.5, zorder=3)
+                ax_auc.yaxis.grid(True, color='#E2E8F0', zorder=0)
+                ax_auc.set_axisbelow(True)
+                for bar, val in zip(bars, auc_vals):
+                    ax_auc.text(bar.get_x() + bar.get_width() / 2,
+                                min(1.02, bar.get_height() + 0.02),
+                                f'{val:.3f}', ha='center', fontsize=9, fontweight='bold')
+                ax_auc.set_ylabel('AUC', fontsize=9)
+                ax_auc.set_title(f'AUC — {selected}', fontsize=10, fontweight='bold')
+                ax_auc.set_ylim(0, 1.05)
+                ax_auc.spines['top'].set_visible(False)
+                ax_auc.spines['right'].set_visible(False)
+                plt.tight_layout()
+                st.image(fig_to_streamlit(fig_auc), use_container_width=True)
+            else:
+                st.info("AUC values were not saved for this model.")
         else:
-            st.markdown(
-                "<div class='info-box'>ℹ️ Full ROC data is only stored for deep learning "
-                "models. ML models (SVM, RF) record averaged metrics.</div>",
-                unsafe_allow_html=True,
-            )
+            st.info("Per-class AUC is not available for this model.")
 
     with col_eer:
         st.markdown("**Equal Error Rate per Class**")
@@ -1689,8 +1728,8 @@ def show_comparison():
                             best_eer, '#10B981', '#D1FAE5', fmt='.2f')
         st.image(fig_to_streamlit(fig_e), use_container_width=True)
 
-    # ── ROC-AUC heat table ────────────────────────────────────────────────
-    st.markdown("<div class='divider-label'>ROC-AUC by Class</div>",
+    # ── AUC heat table ────────────────────────────────────────────────────
+    st.markdown("<div class='divider-label'>AUC by Class</div>",
                 unsafe_allow_html=True)
     roc_rows = []
     for mname in model_labels:
@@ -1703,8 +1742,8 @@ def show_comparison():
     if roc_rows:
         st.dataframe(pd.DataFrame(roc_rows), use_container_width=True, hide_index=True)
         st.markdown(
-            "<div class='info-box'>ℹ️ ROC-AUC closer to 1.0 is better. "
-            "ML models (SVM, RF) may show 0.0 if full curve data was not stored.</div>",
+            "<div class='info-box'>ℹ️ AUC closer to 1.0 is better. "
+            "Some models may show 0.0 if AUC was not stored during evaluation.</div>",
             unsafe_allow_html=True,
         )
 
@@ -1943,7 +1982,7 @@ def show_about():
 | **Iris segmentation** | Hough Circle Transform (OpenCV) |
 | **ML features** | Gabor filter (→ SVM) · 2D Wavelet DWT (→ RF, 5-fold CV) |
 | **DL models** | Xception, ResNet50 (ImageNet transfer learning + fine-tune) |
-| **Metrics** | Accuracy, Precision, Recall, F1, FAR, FRR, EER, ROC-AUC |
+| **Metrics** | Accuracy, Precision, Recall, F1, FAR, FRR, EER, AUC |
 | **Framework** | Python · TensorFlow/Keras · scikit-learn · Streamlit |
 """)
 
