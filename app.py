@@ -1469,6 +1469,8 @@ def show_evaluation():
     # ── Metric tile row ───────────────────────────────────────────────────
     st.markdown("<div class='divider-label'>Overall Metrics</div>", unsafe_allow_html=True)
 
+    per = m.get('per_class', {})
+
     def _metric_value(key):
         if key == 'roc_auc':
             if isinstance(m.get('roc_auc', None), (int, float)):
@@ -1515,7 +1517,6 @@ def show_evaluation():
     # ── Per-class metrics table ───────────────────────────────────────────
     st.markdown("<div class='divider-label'>Per-Class Metrics (One-vs-Rest)</div>",
                 unsafe_allow_html=True)
-    per = m.get('per_class', {})
     if per:
         rows = []
         for cls in CLASSES:
@@ -1671,17 +1672,23 @@ def show_comparison():
     rows = []
     for rank_i, (mname, _) in enumerate(sorted_acc):
         mv = metrics_all[mname]
-        badge = rank_icons[rank_i] if rank_i < 3 else f"#{rank_i+1}"
+        per = mv.get('per_class', {})
+        if isinstance(mv.get('roc_auc', None), (int, float)):
+            auc_val = float(mv['roc_auc'])
+        elif per:
+            aucs = [float(per[c].get('roc_auc', 0)) for c in CLASSES if c in per]
+            aucs = [a for a in aucs if a > 0]
+            auc_val = float(np.mean(aucs)) if aucs else 0.0
+        else:
+            auc_val = 0.0
         rows.append({
-            'Rank':      badge,
+            'Rank':      str(rank_i + 1),
             'Model':     mname,
             'Accuracy':  f"{float(mv.get('accuracy', 0))*100:.2f}%",
             'Precision': f"{float(mv.get('precision', 0))*100:.2f}%",
             'Recall':    f"{float(mv.get('recall', 0))*100:.2f}%",
             'F1':        f"{float(mv.get('f1', 0))*100:.2f}%",
-            'FAR':       f"{float(mv.get('far', 0))*100:.2f}%",
-            'FRR':       f"{float(mv.get('frr', 0))*100:.2f}%",
-            'EER':       f"{float(mv.get('eer', 0))*100:.2f}%",
+            'AUC':       f"{auc_val:.4f}",
         })
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
